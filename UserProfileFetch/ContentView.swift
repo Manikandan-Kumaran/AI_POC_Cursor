@@ -7,9 +7,11 @@ import SwiftUI
 
 struct ContentView: View {
     @ObservedObject private var viewModel: UserProfileViewModel
+    @Binding var isLoggedIn: Bool
 
-    init(viewModel: UserProfileViewModel) {
+    init(viewModel: UserProfileViewModel, isLoggedIn: Binding<Bool>) {
         self.viewModel = viewModel
+        self._isLoggedIn = isLoggedIn
     }
 
     var body: some View {
@@ -64,6 +66,13 @@ struct ContentView: View {
                 .padding(.vertical, 20)
             }
             .navigationTitle("User Profile")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Log out", systemImage: "rectangle.portrait.and.arrow.right") {
+                        isLoggedIn = false
+                    }
+                }
+            }
             .refreshable {
                 await viewModel.loadProfile()
             }
@@ -133,5 +142,5 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView(viewModel: UserProfileViewModel(profileService: ProfileService.shared))
+    ContentView(viewModel: UserProfileViewModel(profileService: ProfileService.shared), isLoggedIn: .constant(true))
 }
