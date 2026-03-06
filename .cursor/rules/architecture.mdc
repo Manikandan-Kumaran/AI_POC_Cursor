@@ -1,0 +1,20 @@
+---
+description: Clean Architecture, MVVM, and API/error-handling standards
+alwaysApply: true
+---
+
+# Architecture & Conventions
+
+- **Use Clean Architecture.** Separate domain, data, and presentation layers. Depend inward (UI → ViewModels → Use Cases/Services → Repositories/APIs).
+
+- **Follow MVVM.** Views bind to ViewModels; ViewModels hold state and call services. No business logic or API calls in Views.
+
+- **No API calls in UI layer.** Views and ViewModels must not use `URLSession`, `URL`, or raw network code. All data comes from Services or Use Cases.
+
+- **All API calls must go through a Service class.** Create dedicated service types (e.g. `ProfileService`, `AuthService`) that perform network requests and return domain models or typed results.
+
+- **Use dependency injection.** Inject services into ViewModels (init or property), and inject ViewModels into Views. Prefer constructor injection and avoid singletons where testability matters.
+
+- **Use async/await properly.** Prefer `async throws` and `Task` from the UI; avoid callback-based APIs for new code. Do not block the main actor with synchronous network calls.
+
+- **Add error handling with Result pattern.** Services can return `Result<Model, Error>` or `throws`; ViewModels map errors to user-facing messages. Handle and display errors in the UI; do not swallow failures.

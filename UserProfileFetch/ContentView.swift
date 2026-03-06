@@ -6,18 +6,20 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State private var profile: UserProfile?
-    @State private var isLoading = false
-    @State private var errorMessage: String?
+    @ObservedObject private var viewModel: UserProfileViewModel
+
+    init(viewModel: UserProfileViewModel) {
+        self.viewModel = viewModel
+    }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
-                    if isLoading {
+                    if viewModel.isLoading {
                         ProgressView("Loading profile…")
                             .padding(.top, 60)
-                    } else if let errorMessage {
+                    } else if let errorMessage = viewModel.errorMessage {
                         VStack(spacing: 12) {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .font(.largeTitle)
@@ -29,7 +31,7 @@ struct ContentView: View {
                                 .padding(.horizontal)
                         }
                         .padding(.top, 40)
-                    } else if let profile {
+                    } else if let profile = viewModel.profile {
                         profileCard(profile)
                     } else {
                         VStack(spacing: 16) {
@@ -43,13 +45,16 @@ struct ContentView: View {
                         .padding(.top, 60)
                     }
 
-                    if !isLoading {
+                    if !viewModel.isLoading {
                         Button {
-                            Task { await fetchProfile() }
+                            Task { await viewModel.loadProfile() }
                         } label: {
-                            Label(profile == nil ? "Fetch Profile" : "Refresh Profile", systemImage: "arrow.clockwise")
-                                .frame(maxWidth: .infinity)
-                                .padding()
+                            Label(
+                                viewModel.profile == nil ? "Fetch Profile" : "Refresh Profile",
+                                systemImage: "arrow.clockwise"
+                            )
+                            .frame(maxWidth: .infinity)
+                            .padding()
                         }
                         .buttonStyle(.borderedProminent)
                         .padding(.horizontal, 24)
@@ -60,12 +65,12 @@ struct ContentView: View {
             }
             .navigationTitle("User Profile")
             .refreshable {
-                await fetchProfile()
+                await viewModel.loadProfile()
             }
         }
         .task {
-            if profile == nil && !isLoading {
-                await fetchProfile()
+            if viewModel.profile == nil && !viewModel.isLoading {
+                await viewModel.loadProfile()
             }
         }
     }
@@ -125,20 +130,8 @@ struct ContentView: View {
             Spacer()
         }
     }
-
-    private func fetchProfile() async {
-        isLoading = true
-        errorMessage = nil
-        defer { isLoading = false }
-
-        do {
-            profile = try await ProfileService.shared.fetchProfile()
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-    }
 }
 
 #Preview {
-    ContentView()
+    ContentView(viewModel: UserProfileViewModel(profileService: ProfileService.shared))
 }
