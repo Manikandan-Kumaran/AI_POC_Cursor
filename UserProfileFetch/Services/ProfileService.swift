@@ -21,7 +21,11 @@ enum ProfileServiceError: Error, LocalizedError {
     }
 }
 
-final class ProfileService {
+protocol ProfileServiceProtocol: AnyObject {
+    func fetchProfile(userId: Int) async -> Result<UserProfile, ProfileServiceError>
+}
+
+final class ProfileService: ProfileServiceProtocol {
     static let shared = ProfileService()
 
     private let baseURL = "https://jsonplaceholder.typicode.com/users"
@@ -31,23 +35,28 @@ final class ProfileService {
         self.session = session
     }
 
-    func fetchProfile(userId: Int = 1) async throws -> UserProfile {
+    func fetchProfile(userId: Int = 1) async -> Result<UserProfile, ProfileServiceError> {
         guard let url = URL(string: "\(baseURL)/\(userId)") else {
-            throw ProfileServiceError.invalidURL
-        }
-
-        let (data, response) = try await session.data(from: url)
-
-        guard let httpResponse = response as? HTTPURLResponse,
-              (200...299).contains(httpResponse.statusCode) else {
-            throw ProfileServiceError.invalidResponse
+            return .failure(.invalidURL)
         }
 
         do {
-            let decoder = JSONDecoder()
-            return try decoder.decode(UserProfile.self, from: data)
+            let (data, response) = try await session.data(from: url)
+
+            guard let httpResponse = response as? HTTPURLResponse,
+                  (200...299).contains(httpResponse.statusCode) else {
+                return .failure(.invalidResponse)
+            }
+
+            do {
+                let decoder = JSONDecoder()
+                let profile = try decoder.decode(UserProfile.self, from: data)
+                return .success(profile)
+            } catch {
+                return .failure(.decodingError)
+            }
         } catch {
-            throw ProfileServiceError.decodingError
+            return .failure(.networkError(error))
         }
     }
 }
